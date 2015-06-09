@@ -1,0 +1,42 @@
+{
+  "family": "elasticsearch",
+  "containerDefinitions": [
+    {
+      "name": "elasticsearch",
+      "image": "quay.io/dispatchbot/elasticsearch-aws:latest",
+      "cpu": 1024,
+      "memory": 768,
+      "portMappings": [
+        {
+          "containerPort": 9200,
+          "hostPort": 9200
+        }, {
+          "containerPort": 9300,
+          "hostPort": 9300
+        }
+      ],
+      "essential": true,
+      "mountPoints": [
+        {
+          "sourceVolume": "esdata",
+          "containerPath": "/usr/share/elasticsearch/data"
+        }, {
+          "sourceVolume": "esconfig",
+          "containerPath": "/usr/share/elasticsearch/config"
+        }
+      ]
+    }
+  ],
+
+  "volumes": [
+    {
+      "name": "esdata",
+      "host": {}
+    }, {
+      "name": "esconfig",
+      "host": {
+        "sourcePath": "/etc/elasticsearch"
+      }
+    }
+  ]
+}

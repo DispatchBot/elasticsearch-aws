@@ -1,0 +1,17 @@
+# Lock the process address space into RAM, preventing any Elasticsearch memory
+# from being swapped out.
+bootstrap.mlockall: true
+
+discovery.type: "ec2"
+plugin.mandatory: "cloud-aws"
+discovery.ec2.host_type: "private_ip"
+discovery.ec2.ping_timeout: "3s"
+discovery.zen.ping.multicast.enabled: false
+
+# Automatically add node attributes relating to ec2 (for example, availability zone,
+# that can be used with the awareness allocation feature).
+cloud.node.auto_attributes: true
+
+cluster.routing.allocation.awareness.attributes: "rack_id"
+
+#cluster.name: "my-cluster"

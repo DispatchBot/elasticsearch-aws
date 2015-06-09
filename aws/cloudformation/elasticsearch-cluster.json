@@ -1,0 +1,260 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Create the auto-scaling group for running Elasticsearch",
+
+  "Parameters": {
+    "Vpc": {
+      "Type": "AWS::EC2::VPC::Id",
+      "Description": "The VPC to place all resources into"
+    },
+
+    "Subnet1": { "Type": "AWS::EC2::Subnet::Id" },
+    "Subnet2": { "Type": "AWS::EC2::Subnet::Id" },
+    "Subnet3": { "Type": "AWS::EC2::Subnet::Id" },
+
+    "EcsInstanceType" : {
+      "Type" : "String",
+      "Description" : "ECS EC2 instance type",
+      "Default" : "t2.micro",
+      "AllowedValues" : [ "t2.micro","t2.small","t2.medium","m3.medium","m3.large","m3.xlarge","m3.2xlarge","c4.large","c4.xlarge","c4.2xlarge","c4.4xlarge","c4.8xlarge","c3.large","c3.xlarge","c3.2xlarge","c3.4xlarge","c3.8xlarge","r3.large","r3.xlarge","r3.2xlarge","r3.4xlarge","r3.8xlarge","i2.xlarge","i2.2xlarge","i2.4xlarge","i2.8xlarge" ],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+
+    "EcsClusterName" : {
+      "Type" : "String",
+      "Description" : "ECS Cluster Name",
+      "Default" : "search"
+    },
+
+    "ESConfigPath": {
+      "Type": "String",
+      "Description": "Elasticsearch path to configs (s3). You should have an elasticsearch.yml and logging.yml files located here."
+    },
+
+    "MinClusterSize": {
+      "Type": "Number",
+      "Description": "Minimum number of active nodes in the cluster.",
+      "Default": 3
+    },
+
+    "MaxClusterSize": {
+      "Type": "Number",
+      "Description": "Maximum number of active nodes in the cluster.",
+      "Default": 6
+    },
+
+    "DesiredClusterSize": {
+      "Type": "Number",
+      "Description": "The desired number of nodes to have in the cluster. Acts as a default number.",
+      "Default": 3
+    },
+
+    "EC2KeyName": {
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "Description": "The key name to give to the allocated EC2s",
+      "Default": ""
+    },
+
+    "ApplicationSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup::Id",
+      "Description": "The general application security group that resources are placed. This allows the resources to communicate over the network. It is also used for Elasticsearchs node discovery."
+    }
+  },
+
+  "Mappings" : {
+    "AMI": {
+      "us-east-1": { "Value": "ami-d0b9acb8" },
+      "us-west-2": { "Value": "ami-6b88b95b" },
+      "eu-west-1": { "Value": "ami-ed7c149a" },
+      "ap-northeast-1": { "Value": "ami-c6c609c6" },
+      "ap-southeast-2": { "Value": "ami-39017e03" }
+    }
+  },
+
+  "Resources": {
+
+    "ElbSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Ports that the public can access on our ELB",
+        "VpcId" : { "Ref" : "Vpc" },
+        "SecurityGroupIngress" : [
+          { "IpProtocol" : "tcp", "FromPort" : 9200, "ToPort" : 9200,
+            "CidrIp" : "0.0.0.0/0" },
+            { "IpProtocol" : "tcp", "FromPort" : 9300, "ToPort" : 9300,
+              "CidrIp" : "0.0.0.0/0" }
+        ]
+      }
+    },
+
+    "EcsSecurityGroup" : {
+     "Type" : "AWS::EC2::SecurityGroup",
+     "Properties" : {
+       "GroupDescription" : "Ports that our ELB can access of our ECS cluster.",
+       "VpcId" : { "Ref" : "Vpc" },
+       "SecurityGroupIngress" : [
+         {
+           "IpProtocol" : "tcp",
+           "FromPort" : 1,
+           "ToPort" : 65535,
+           "SourceSecurityGroupId" :  { "Ref" : "ElbSecurityGroup" }
+         }, {
+           "IpProtocol": "tcp",
+           "FromPort": 1,
+           "ToPort": 65535,
+           "CidrIp": "0.0.0.0/0"
+         }
+       ]
+      }
+    },
+
+    "ElasticSearchSecurityGroup": {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Group for ES to perform self discovery within.",
+        "VpcId" : { "Ref" : "Vpc" }
+      }
+    },
+
+    "Elb": {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "SecurityGroups" : [ { "Ref" : "ElbSecurityGroup" } ],
+        "Subnets" : [{ "Ref" : "Subnet1" }, { "Ref" : "Subnet2" }, { "Ref" : "Subnet3" }],
+        "CrossZone" : "true",
+        "LoadBalancerName": "Elasticsearch",
+        "Scheme": "internal",
+        "Listeners" : [ {
+          "Protocol": "HTTP",
+          "InstanceProtocol": "HTTP",
+          "LoadBalancerPort" : 9200,
+          "InstancePort" : 9200
+        }, {
+          "Protocol": "HTTP",
+          "InstanceProtocol": "HTTP",
+          "LoadBalancerPort" : 9300,
+          "InstancePort" : 9300
+        }]
+      }
+    },
+
+    "EcsIamInstanceRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "ec2.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ] },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "ecsInstanceRole",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ecs:CreateCluster",
+                    "ecs:RegisterContainerInstance",
+                    "ecs:DeregisterContainerInstance",
+                    "ecs:DiscoverPollEndpoint",
+                    "ecs:Submit*",
+                    "ecs:Poll"
+                  ],
+                  "Resource": [ "*" ]
+                }
+              ]
+            }
+          }, {
+            "PolicyName": "s3ReadOnlyAccess",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:Get*",
+                    "s3:List*"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }, {
+            "PolicyName": "esInstanceRole",
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Action": [
+                    "ec2:DescribeInstances",
+                    "ec2:DescribeAvailabilityZones",
+                    "ec2:DescribeRegions",
+                    "ec2:DescribeSecurityGroups",
+                    "ec2:DescribeTags"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": [ "*" ]
+                }
+              ],
+              "Version": "2012-10-17"
+            }
+          }
+        ]
+      }
+    },
+
+    "EcsInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [ { "Ref": "EcsIamInstanceRole" } ]
+      }
+    },
+
+    "LaunchConfiguration": {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+        "ImageId" : { "Fn::FindInMap" : [ "AMI", { "Ref": "AWS::Region"}, "Value" ]},
+        "InstanceType" : { "Ref" : "EcsInstanceType" },
+        "AssociatePublicIpAddress" : "true",
+        "IamInstanceProfile": { "Ref": "EcsInstanceProfile" },
+        "SecurityGroups" : [ { "Ref" : "EcsSecurityGroup" }, { "Ref": "ApplicationSecurityGroup" }, { "Ref": "ElasticSearchSecurityGroup" } ],
+        "KeyName": { "Ref": "EC2KeyName" },
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+            "#!/bin/bash\n",
+            "echo ECS_CLUSTER=", { "Ref": "EcsClusterName" }, " >> /etc/ecs/ecs.config\n",
+            "mdkir -p /etc/elasticsearch\n",
+            "yum install -y aws-cli\n",
+            "aws s3 cp ", { "Ref": "ESConfigPath" }, "/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml\n",
+            "aws s3 cp ", { "Ref": "ESConfigPath" }, "/logging.yml /etc/elasticsearch/logging.yml\n",
+            "echo cloud.aws.region: \"", { "Ref": "AWS::Region" }, "\" >> /etc/elasticsearch/elasticsearch.yml\n",
+            "echo discovery.ec2.groups: \"", { "Ref": "ElasticSearchSecurityGroup" }, "\" >> /etc/elasticsearch/elasticsearch.yml\n",
+            "ip=$(/sbin/ifconfig eth0|grep inet|head -1|sed 's/\\:/ /'|awk '{print $3}')\n",
+            "echo network.publish_host: $ip >> /etc/elasticsearch/elasticsearch.yml"
+          ] ] }
+        }
+      }
+    },
+
+    "SearchAsg" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "VPCZoneIdentifier" : [ { "Ref" : "Subnet1" }, { "Ref" : "Subnet2" }, { "Ref" : "Subnet3" } ],
+        "LaunchConfigurationName" : { "Ref" : "LaunchConfiguration" },
+        "MinSize" : { "Ref": "MinClusterSize" },
+        "MaxSize" : { "Ref": "MaxClusterSize" },
+        "DesiredCapacity" : { "Ref": "DesiredClusterSize" },
+        "Cooldown": "60",
+        "LoadBalancerNames": [ { "Ref": "Elb"} ]
+      }
+    }
+  }
+}
