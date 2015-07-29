@@ -20,15 +20,19 @@
       "ConstraintDescription" : "must be a valid EC2 instance type."
     },
 
-    "EcsClusterName" : {
-      "Type" : "String",
-      "Description" : "ECS Cluster Name",
-      "Default" : "search"
-    },
-
     "ESConfigPath": {
       "Type": "String",
-      "Description": "Elasticsearch path to configs (s3). You should have an elasticsearch.yml and logging.yml files located here."
+      "Description": "Path to elasticsearch config on S3. E.g., s3://my_bucket/elasticsearch.yml"
+    },
+
+    "ESLoggingConfigPath": {
+      "Type": "String",
+      "Description": "Path to elasticsearch logging file on S3. E.g., s3://my_bucket/logging.yml"
+    },
+
+    "ESBootstrapPath": {
+      "Type": "String",
+      "Description": "Path to a custom bootstrap file. Good for creating EBS volumes"
     },
 
     "MinClusterSize": {
@@ -63,14 +67,13 @@
 
   "Mappings" : {
     "AMI": {
-      "us-east-1": { "Value": "ami-d0b9acb8" },
-      "us-west-2": { "Value": "ami-6b88b95b" },
-      "eu-west-1": { "Value": "ami-ed7c149a" },
-      "ap-northeast-1": { "Value": "ami-c6c609c6" },
-      "ap-southeast-2": { "Value": "ami-39017e03" }
+      "us-east-1": { "Value": "ami-8da458e6" },
+      "us-west-2": { "Value": "ami-db0306eb" },
+      "eu-west-1": { "Value": "ami-7948320e" },
+      "ap-northeast-1": { "Value": "ami-fa12b7fa" },
+      "ap-southeast-2": { "Value": "ami-014f353b" }
     }
   },
-
   "Resources": {
 
     "ElbSecurityGroup" : {
@@ -106,6 +109,10 @@
          }
        ]
       }
+    },
+
+    "EcsCluster": {
+      "Type" : "AWS::ECS::Cluster"
     },
 
     "ElasticSearchSecurityGroup": {
@@ -189,6 +196,25 @@
               ]
             }
           }, {
+            "PolicyName": "createEbsVolume",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ec2:AttachVolume",
+                    "ec2:CreateVolume",
+                    "ec2:DeleteVolume",
+                    "ec2:DetachVolume",
+                    "ec2:DescribeVolumes",
+                    "ec2:ModifyInstanceAttribute"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }, {
             "PolicyName": "esInstanceRole",
             "PolicyDocument": {
               "Statement": [
@@ -230,11 +256,13 @@
         "KeyName": { "Ref": "EC2KeyName" },
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
             "#!/bin/bash\n",
-            "echo ECS_CLUSTER=", { "Ref": "EcsClusterName" }, " >> /etc/ecs/ecs.config\n",
+            "echo ECS_CLUSTER=", { "Ref": "EcsCluster" }, " >> /etc/ecs/ecs.config\n",
             "mdkir -p /etc/elasticsearch\n",
             "yum install -y aws-cli\n",
-            "aws s3 cp ", { "Ref": "ESConfigPath" }, "/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml\n",
-            "aws s3 cp ", { "Ref": "ESConfigPath" }, "/logging.yml /etc/elasticsearch/logging.yml\n",
+            "aws s3 cp ", { "Ref": "ESConfigPath" }, " /etc/elasticsearch/elasticsearch.yml\n",
+            "aws s3 cp ", { "Ref": "ESLoggingConfigPath" }, " /etc/elasticsearch/logging.yml\n",
+            "aws s3 cp ", { "Ref": "ESBootstrapPath" }, " /tmp/bootstrap.sh\n",
+            "chmod +x /tmp/bootstrap.sh && touch /tmp/bootstrap.log && sh /tmp/bootstrap.sh 2>&1 /tmp/bootstrap.log\n",
             "echo cloud.aws.region: \"", { "Ref": "AWS::Region" }, "\" >> /etc/elasticsearch/elasticsearch.yml\n",
             "echo discovery.ec2.groups: \"", { "Ref": "ElasticSearchSecurityGroup" }, "\" >> /etc/elasticsearch/elasticsearch.yml\n",
             "ip=$(/sbin/ifconfig eth0|grep inet|head -1|sed 's/\\:/ /'|awk '{print $3}')\n",

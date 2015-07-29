@@ -4,8 +4,8 @@
     {
       "name": "elasticsearch",
       "image": "quay.io/dispatchbot/elasticsearch-aws:latest",
-      "cpu": 1024,
-      "memory": 768,
+      "cpu": 2048,
+      "memory": 3072,
       "portMappings": [
         {
           "containerPort": 9200,
@@ -31,7 +31,9 @@
   "volumes": [
     {
       "name": "esdata",
-      "host": {}
+      "host": {
+        "sourcePath": "/esdata"
+      }
     }, {
       "name": "esconfig",
       "host": {
