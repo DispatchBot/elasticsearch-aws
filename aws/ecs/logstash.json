@@ -1,0 +1,33 @@
+{
+  "family": "logstash",
+  "containerDefinitions": [
+    {
+      "name": "logstash",
+      "image": "logstash:2.3.0",
+      "command": ["logstash -f /etc/logstash/logstash.conf"],
+      "essential": true,
+      "cpu": 1024,
+      "memory": 512,
+      "portMappings": [
+        {
+          "containerPort": 12201,
+          "hostPort": 12201
+        }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "logstash",
+          "containerPath": "/etc/logstash"
+        }
+      ]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "logstash",
+      "host": {
+        "sourcePath": "/etc/logstash"
+      }
+    }
+  ]
+}

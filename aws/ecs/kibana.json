@@ -1,0 +1,24 @@
+{
+  "family": "kibana",
+  "containerDefinitions": [
+    {
+      "name": "kibana",
+      "essential": true,
+      "image": "kibana",
+      "cpu": 100,
+      "memory": 256,
+      "portMappings": [
+        {
+          "containerPort": 5601,
+          "hostPort": 5601
+        }
+      ],
+      "environment": [
+        {
+          "name": "ELASTICSEARCH_URL",
+          "value": ""
+        }
+      ]
+    }
+  ]
+}
