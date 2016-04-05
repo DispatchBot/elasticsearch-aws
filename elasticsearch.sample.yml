@@ -14,4 +14,7 @@ cloud.node.auto_attributes: true
 
 cluster.routing.allocation.awareness.attributes: "rack_id"
 
+# You must specify this in order for auto-discovery to work properly.
 #cluster.name: "my-cluster"
+
+network.host: 0.0.0.0
