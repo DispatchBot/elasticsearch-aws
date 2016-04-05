@@ -4,8 +4,8 @@
     {
       "name": "elasticsearch",
       "image": "quay.io/dispatchbot/elasticsearch-aws:latest",
-      "cpu": 2048,
-      "memory": 3072,
+      "cpu": 1024,
+      "memory": 2048,
       "portMappings": [
         {
           "containerPort": 9200,
@@ -22,7 +22,7 @@
           "containerPath": "/usr/share/elasticsearch/data"
         }, {
           "sourceVolume": "esconfig",
-          "containerPath": "/usr/share/elasticsearch/config"
+          "containerPath": "/usr/share/elasticsearch/config/elasticsearch.yml"
         }
       ]
     }
@@ -37,7 +37,7 @@
     }, {
       "name": "esconfig",
       "host": {
-        "sourcePath": "/etc/elasticsearch"
+        "sourcePath": "/etc/elasticsearch/elasticsearch.yml"
       }
     }
   ]
