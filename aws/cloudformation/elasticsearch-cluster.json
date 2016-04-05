@@ -16,18 +16,40 @@
       "Type" : "String",
       "Description" : "ECS EC2 instance type",
       "Default" : "t2.micro",
-      "AllowedValues" : [ "t2.micro","t2.small","t2.medium","m3.medium","m3.large","m3.xlarge","m3.2xlarge","c4.large","c4.xlarge","c4.2xlarge","c4.4xlarge","c4.8xlarge","c3.large","c3.xlarge","c3.2xlarge","c3.4xlarge","c3.8xlarge","r3.large","r3.xlarge","r3.2xlarge","r3.4xlarge","r3.8xlarge","i2.xlarge","i2.2xlarge","i2.4xlarge","i2.8xlarge" ],
+      "AllowedValues" : [
+        "t2.micro",
+        "t2.small",
+        "t2.medium",
+        "m3.medium",
+        "m3.large",
+        "m3.xlarge",
+        "m3.2xlarge",
+        "c4.large",
+        "c4.xlarge",
+        "c4.2xlarge",
+        "c4.4xlarge",
+        "c4.8xlarge",
+        "c3.large",
+        "c3.xlarge",
+        "c3.2xlarge",
+        "c3.4xlarge",
+        "c3.8xlarge",
+        "r3.large",
+        "r3.xlarge",
+        "r3.2xlarge",
+        "r3.4xlarge",
+        "r3.8xlarge",
+        "i2.xlarge",
+        "i2.2xlarge",
+        "i2.4xlarge",
+        "i2.8xlarge"
+      ],
       "ConstraintDescription" : "must be a valid EC2 instance type."
     },
 
     "ESConfigPath": {
       "Type": "String",
       "Description": "Path to elasticsearch config on S3. E.g., s3://my_bucket/elasticsearch.yml"
-    },
-
-    "ESLoggingConfigPath": {
-      "Type": "String",
-      "Description": "Path to elasticsearch logging file on S3. E.g., s3://my_bucket/logging.yml"
     },
 
     "ESBootstrapPath": {
@@ -38,7 +60,7 @@
     "MinClusterSize": {
       "Type": "Number",
       "Description": "Minimum number of active nodes in the cluster.",
-      "Default": 3
+      "Default": 1
     },
 
     "MaxClusterSize": {
@@ -59,33 +81,71 @@
       "Default": ""
     },
 
-    "ApplicationSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup::Id",
-      "Description": "The general application security group that resources are placed. This allows the resources to communicate over the network. It is also used for Elasticsearchs node discovery."
+    "PrivateFQDomain": {
+      "Type": "String",
+      "Description": "The Private Fully Qualified Domain Name you will use for this cluster. This will be created in Route53"
+    },
+
+    "PrivateHostedZone": {
+      "Type": "AWS::Route53::HostedZone::Id",
+      "Description": "The Private Route53 zone you are placing these resources into"
+    },
+
+    "PublicFQDomain": {
+      "Type": "String",
+      "Description": "The Public Fully Qualified Domain Name you will use for this cluster. This will be created in Route53"
+    },
+
+    "PublicHostedZone": {
+      "Type": "AWS::Route53::HostedZone::Id",
+      "Description": "The public Route53 zone you are placing these resources into"
     }
   },
 
   "Mappings" : {
     "AMI": {
-      "us-east-1": { "Value": "ami-8da458e6" },
-      "us-west-2": { "Value": "ami-db0306eb" },
-      "eu-west-1": { "Value": "ami-7948320e" },
-      "ap-northeast-1": { "Value": "ami-fa12b7fa" },
-      "ap-southeast-2": { "Value": "ami-014f353b" }
+      "us-east-1": { "Value": "ami-cb2305a1" },
+      "us-west-1": { "Value": "ami-bdafdbdd" },
+      "us-west-2": { "Value": "ami-ec75908c" },
+      "eu-west-1": { "Value": "ami-13f84d60" },
+      "ap-northeast-1": { "Value": "ami-e9724c87" },
+      "ap-southeast-2": { "Value": "ami-83af8ae0" }
     }
   },
   "Resources": {
 
-    "ElbSecurityGroup" : {
+    "AccessElasticsearchSecurityGroup" : {
+     "Type" : "AWS::EC2::SecurityGroup",
+     "Properties" : {
+       "GroupDescription" : "A group of resources that can access Elasticsesarch and Kibana publicly",
+       "VpcId" : { "Ref" : "Vpc" }
+     }
+    },
+
+    "PrivateElbSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
         "GroupDescription" : "Ports that the public can access on our ELB",
         "VpcId" : { "Ref" : "Vpc" },
         "SecurityGroupIngress" : [
           { "IpProtocol" : "tcp", "FromPort" : 9200, "ToPort" : 9200,
-            "CidrIp" : "0.0.0.0/0" },
-            { "IpProtocol" : "tcp", "FromPort" : 9300, "ToPort" : 9300,
-              "CidrIp" : "0.0.0.0/0" }
+            "CidrIp" : "10.0.0.0/8" },
+          { "IpProtocol" : "tcp", "FromPort" : 9300, "ToPort" : 9300,
+            "CidrIp" : "10.0.0.0/8" }
+        ]
+      }
+    },
+
+    "PublicElbSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Ports that the public can access on our ELB",
+        "VpcId" : { "Ref" : "Vpc" },
+        "SecurityGroupIngress" : [
+          { "IpProtocol" : "tcp", "FromPort" : 80, "ToPort" : 80,
+            "SourceSecurityGroupId" : { "Ref": "AccessElasticsearchSecurityGroup" } },
+          { "IpProtocol" : "tcp", "FromPort" : 9200, "ToPort" : 9200,
+            "SourceSecurityGroupId" : { "Ref": "AccessElasticsearchSecurityGroup" } }
         ]
       }
     },
@@ -100,12 +160,12 @@
            "IpProtocol" : "tcp",
            "FromPort" : 1,
            "ToPort" : 65535,
-           "SourceSecurityGroupId" :  { "Ref" : "ElbSecurityGroup" }
+           "SourceSecurityGroupId" :  { "Ref" : "PrivateElbSecurityGroup" }
          }, {
-           "IpProtocol": "tcp",
-           "FromPort": 1,
-           "ToPort": 65535,
-           "CidrIp": "0.0.0.0/0"
+           "IpProtocol" : "tcp",
+           "FromPort" : 1,
+           "ToPort" : 65535,
+           "SourceSecurityGroupId" :  { "Ref" : "PublicElbSecurityGroup" }
          }
        ]
       }
@@ -119,18 +179,39 @@
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
         "GroupDescription" : "Group for ES to perform self discovery within.",
-        "VpcId" : { "Ref" : "Vpc" }
+        "VpcId" : { "Ref" : "Vpc" },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 9200,
+            "ToPort": 9200,
+            "CidrIp": "10.0.0.0/8"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 9300,
+            "ToPort": 9300,
+            "CidrIp": "10.0.0.0/8"
+          }
+        ]
       }
     },
 
-    "Elb": {
+    "PrivateElb": {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties" : {
-        "SecurityGroups" : [ { "Ref" : "ElbSecurityGroup" } ],
+        "SecurityGroups" : [ { "Ref" : "PrivateElbSecurityGroup" } ],
         "Subnets" : [{ "Ref" : "Subnet1" }, { "Ref" : "Subnet2" }, { "Ref" : "Subnet3" }],
         "CrossZone" : "true",
-        "LoadBalancerName": "Elasticsearch",
+        "LoadBalancerName": "elasticsearch-private",
         "Scheme": "internal",
+        "HealthCheck": {
+          "Interval": "15",
+          "Target": "TCP:9200",
+          "Timeout": "5",
+          "UnhealthyThreshold": "2",
+          "HealthyThreshold": "2"
+        },
         "Listeners" : [ {
           "Protocol": "HTTP",
           "InstanceProtocol": "HTTP",
@@ -141,6 +222,35 @@
           "InstanceProtocol": "HTTP",
           "LoadBalancerPort" : 9300,
           "InstancePort" : 9300
+        }]
+      }
+    },
+
+    "PublicElb": {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "SecurityGroups" : [ { "Ref" : "PublicElbSecurityGroup" }, { "Ref": "AccessElasticsearchSecurityGroup" } ],
+        "Subnets" : [{ "Ref" : "Subnet1" }, { "Ref" : "Subnet2" }, { "Ref" : "Subnet3" }],
+        "CrossZone" : "true",
+        "LoadBalancerName": "elasticsearch-public",
+        "Scheme": "internet-facing",
+        "HealthCheck": {
+          "Interval": "15",
+          "Target": "TCP:9200",
+          "Timeout": "5",
+          "UnhealthyThreshold": "2",
+          "HealthyThreshold": "2"
+        },
+        "Listeners" : [ {
+          "Protocol": "HTTP",
+          "InstanceProtocol": "HTTP",
+          "LoadBalancerPort" : 80,
+          "InstancePort" : 5601
+        }, {
+          "Protocol": "HTTP",
+          "InstanceProtocol": "HTTP",
+          "LoadBalancerPort" : 9200,
+          "InstancePort" : 9200
         }]
       }
     },
@@ -252,7 +362,7 @@
         "InstanceType" : { "Ref" : "EcsInstanceType" },
         "AssociatePublicIpAddress" : "true",
         "IamInstanceProfile": { "Ref": "EcsInstanceProfile" },
-        "SecurityGroups" : [ { "Ref" : "EcsSecurityGroup" }, { "Ref": "ApplicationSecurityGroup" }, { "Ref": "ElasticSearchSecurityGroup" } ],
+        "SecurityGroups" : [ { "Ref" : "EcsSecurityGroup" }, { "Ref": "AccessElasticsearchSecurityGroup" }, { "Ref": "ElasticSearchSecurityGroup" } ],
         "KeyName": { "Ref": "EC2KeyName" },
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
             "#!/bin/bash\n",
@@ -260,7 +370,6 @@
             "mdkir -p /etc/elasticsearch\n",
             "yum install -y aws-cli\n",
             "aws s3 cp ", { "Ref": "ESConfigPath" }, " /etc/elasticsearch/elasticsearch.yml\n",
-            "aws s3 cp ", { "Ref": "ESLoggingConfigPath" }, " /etc/elasticsearch/logging.yml\n",
             "aws s3 cp ", { "Ref": "ESBootstrapPath" }, " /tmp/bootstrap.sh\n",
             "chmod +x /tmp/bootstrap.sh && touch /tmp/bootstrap.log && sh /tmp/bootstrap.sh 2>&1 /tmp/bootstrap.log\n",
             "echo cloud.aws.region: \"", { "Ref": "AWS::Region" }, "\" >> /etc/elasticsearch/elasticsearch.yml\n",
@@ -281,7 +390,36 @@
         "MaxSize" : { "Ref": "MaxClusterSize" },
         "DesiredCapacity" : { "Ref": "DesiredClusterSize" },
         "Cooldown": "60",
-        "LoadBalancerNames": [ { "Ref": "Elb"} ]
+        "LoadBalancerNames": [ { "Ref": "PrivateElb" }, { "Ref": "PublicElb" } ],
+        "TerminationPolicies": [ "OldestInstance", "Default" ]
+      }
+    },
+
+    "PublicDNS": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "AliasTarget": {
+          "DNSName": { "Fn::GetAtt": [ "PublicElb", "DNSName" ] },
+          "EvaluateTargetHealth": false,
+          "HostedZoneId": { "Fn::GetAtt": ["PublicElb", "CanonicalHostedZoneNameID"] }
+        },
+        "HostedZoneId": { "Ref": "PublicHostedZone" },
+        "Name": { "Ref": "PublicFQDomain" },
+        "Type": "A"
+      }
+    },
+
+    "PrivateDNS": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "AliasTarget": {
+          "DNSName": { "Fn::GetAtt": [ "PrivateElb", "DNSName" ] },
+          "EvaluateTargetHealth": false,
+          "HostedZoneId": { "Fn::GetAtt": ["PrivateElb", "CanonicalHostedZoneNameID"] }
+        },
+        "HostedZoneId": { "Ref": "PrivateHostedZone" },
+        "Name": { "Ref": "PrivateFQDomain" },
+        "Type": "A"
       }
     }
   }
