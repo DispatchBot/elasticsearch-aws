@@ -17,7 +17,7 @@ There is a cloudformation template provided at `aws/cloudformation/elasticsearch
 Some pre-reqs to running this template:
 
 * Create a VPC with three subnets, existing in each of the availability zones (TODO: link our VPC cloudformation template).
-* Create an S3 bucket to host your `elasticsearch.yml` and `logging.yml` configuration files. Samples are provided in this repo.
+* Create an S3 bucket to host your `elasticsearch.yml` configuration file. A samples is provided in this repo.
 * Create your own, or use our aws/bootstrap.sh file. This is ran when the EC2 instance boots. The one we provide creates an EBS volume and mounts it. It also sets the nodes `rack_id` for Elasticsearch awareness.
 
 ### ECS
