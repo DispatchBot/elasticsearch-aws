@@ -9,7 +9,7 @@
 
 ##
 # Size in GB of the EBS volume to create
-VOLUME_SIZE=100
+VOLUME_SIZE=200
 
 # Get the region and zone of this instance.
 EC2_AZ=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
