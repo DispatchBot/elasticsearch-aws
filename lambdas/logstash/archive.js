@@ -35,10 +35,13 @@ exports.archive = function(event, context) {
         }).then(function() {
           console.log('Successfully deleted index ', name);
         }));
+      } else {
+        console.log(name, ' is not old enough. Skipping...');
       }
     }
 
     return Promise.all(promises).then(function() {
+      console.log('Deleted ' + promises.length + ' indexes');
       context.succeed('Success');
     }).catch(function(err) {
       console.error(err);
