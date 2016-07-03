@@ -104,20 +104,34 @@
 
   "Mappings" : {
     "AMI": {
-      "us-east-1": { "Value": "ami-cb2305a1" },
-      "us-west-1": { "Value": "ami-bdafdbdd" },
-      "us-west-2": { "Value": "ami-ec75908c" },
-      "eu-west-1": { "Value": "ami-13f84d60" },
-      "ap-northeast-1": { "Value": "ami-e9724c87" },
-      "ap-southeast-2": { "Value": "ami-83af8ae0" }
+      "us-east-1": { "Value": "ami-a88a46c5" },
+      "us-west-1": { "Value": "ami-34a7e354" },
+      "us-west-2": { "Value": "ami-ae0acdce" },
+      "eu-west-1": { "Value": "ami-ccd942bf" },
+      "ap-northeast-1": { "Value": "ami-4aab5d2b" },
+      "ap-southeast-2": { "Value": "ami-0bf2da68" }
     }
   },
   "Resources": {
+    "S3RepositoryBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "AccessControl": "Private"
+      }
+    },
 
     "AccessElasticsearchSecurityGroup" : {
      "Type" : "AWS::EC2::SecurityGroup",
      "Properties" : {
-       "GroupDescription" : "A group of resources that can access Elasticsesarch and Kibana publicly",
+       "GroupDescription" : "A group of resources that can access Elasticsesarch publicly",
+       "VpcId" : { "Ref" : "Vpc" }
+     }
+    },
+
+    "AccessKibanaSecurityGroup" : {
+     "Type" : "AWS::EC2::SecurityGroup",
+     "Properties" : {
+       "GroupDescription" : "A group of resources that can access Kibana privately",
        "VpcId" : { "Ref" : "Vpc" }
      }
     },
@@ -125,13 +139,15 @@
     "PrivateElbSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
-        "GroupDescription" : "Ports that the public can access on our ELB",
+        "GroupDescription" : "Ports that internal resources can access on our ELB",
         "VpcId" : { "Ref" : "Vpc" },
         "SecurityGroupIngress" : [
           { "IpProtocol" : "tcp", "FromPort" : 9200, "ToPort" : 9200,
             "CidrIp" : "10.0.0.0/8" },
           { "IpProtocol" : "tcp", "FromPort" : 9300, "ToPort" : 9300,
-            "CidrIp" : "10.0.0.0/8" }
+            "CidrIp" : "10.0.0.0/8" },
+          { "IpProtocol" : "tcp", "FromPort" : 80, "ToPort" : 80,
+            "SourceSecurityGroupId" : { "Ref": "AccessKibanaSecurityGroup" } }
         ]
       }
     },
@@ -142,9 +158,9 @@
         "GroupDescription" : "Ports that the public can access on our ELB",
         "VpcId" : { "Ref" : "Vpc" },
         "SecurityGroupIngress" : [
-          { "IpProtocol" : "tcp", "FromPort" : 80, "ToPort" : 80,
-            "SourceSecurityGroupId" : { "Ref": "AccessElasticsearchSecurityGroup" } },
           { "IpProtocol" : "tcp", "FromPort" : 9200, "ToPort" : 9200,
+            "SourceSecurityGroupId" : { "Ref": "AccessElasticsearchSecurityGroup" } },
+          { "IpProtocol" : "tcp", "FromPort" : 80, "ToPort" : 80,
             "SourceSecurityGroupId" : { "Ref": "AccessElasticsearchSecurityGroup" } }
         ]
       }
@@ -158,13 +174,28 @@
        "SecurityGroupIngress" : [
          {
            "IpProtocol" : "tcp",
-           "FromPort" : 1,
-           "ToPort" : 65535,
+           "FromPort" : 9200,
+           "ToPort" : 9200,
            "SourceSecurityGroupId" :  { "Ref" : "PrivateElbSecurityGroup" }
          }, {
            "IpProtocol" : "tcp",
-           "FromPort" : 1,
-           "ToPort" : 65535,
+           "FromPort" : 9300,
+           "ToPort" : 9300,
+           "SourceSecurityGroupId" :  { "Ref" : "PrivateElbSecurityGroup" }
+         }, {
+           "IpProtocol" : "tcp",
+           "FromPort" : 5601,
+           "ToPort" : 5601,
+           "SourceSecurityGroupId" :  { "Ref" : "PrivateElbSecurityGroup" }
+         }, {
+           "IpProtocol" : "tcp",
+           "FromPort" : 9200,
+           "ToPort" : 9200,
+           "SourceSecurityGroupId" :  { "Ref" : "PublicElbSecurityGroup" }
+         }, {
+           "IpProtocol" : "tcp",
+           "FromPort" : 5601,
+           "ToPort" : 5601,
            "SourceSecurityGroupId" :  { "Ref" : "PublicElbSecurityGroup" }
          }
        ]
@@ -200,7 +231,7 @@
     "PrivateElb": {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties" : {
-        "SecurityGroups" : [ { "Ref" : "PrivateElbSecurityGroup" } ],
+        "SecurityGroups" : [ { "Ref" : "PrivateElbSecurityGroup" }, { "Ref" : "AccessKibanaSecurityGroup" } ],
         "Subnets" : [{ "Ref" : "Subnet1" }, { "Ref" : "Subnet2" }, { "Ref" : "Subnet3" }],
         "CrossZone" : "true",
         "LoadBalancerName": "elasticsearch-private",
@@ -222,6 +253,11 @@
           "InstanceProtocol": "HTTP",
           "LoadBalancerPort" : 9300,
           "InstancePort" : 9300
+        }, {
+          "Protocol": "HTTP",
+          "InstanceProtocol": "HTTP",
+          "LoadBalancerPort" : 80,
+          "InstancePort" : 5601
         }]
       }
     },
@@ -341,6 +377,24 @@
                 }
               ],
               "Version": "2012-10-17"
+            }
+          }, {
+            "PolicyName": "S3Snapshots",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:Put*",
+                    "s3:Get*",
+                    "s3:List*",
+                    "s3:AbortMultipartUpload",
+                    "s3:DeleteObject"
+                  ],
+                  "Resource": { "Fn::Join": ["", [ "arn:aws:s3:::", { "Ref": "S3RepositoryBucket" }, "/*"]]}
+                }
+              ]
             }
           }
         ]
