@@ -4,4 +4,4 @@ FROM elasticsearch:5.1.1-alpine
 RUN /usr/share/elasticsearch/bin/elasticsearch-plugin install discovery-ec2
 RUN /usr/share/elasticsearch/bin/elasticsearch-plugin install repository-s3
 
-RUN ulimit -n 65536
+COPY limits.conf /etc/security/limits.conf
