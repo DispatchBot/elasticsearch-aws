@@ -1,0 +1,427 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Create the auto-scaling group for running Elasticsearch",
+
+  "Parameters": {
+    "PublicFQDomain": {
+      "Type": "String",
+      "Description": "The fully qualified domain to kibana"
+    },
+
+    "RootDomain": {
+      "Type": "String",
+      "Description": "The root domain. Used for validating the certificate"
+    },
+
+    "Vpc": {
+      "Type": "AWS::EC2::VPC::Id",
+      "Description": "The VPC to place all resources into"
+    },
+
+    "PublicSubnet1": { "Type": "AWS::EC2::Subnet::Id" },
+    "PublicSubnet2": { "Type": "AWS::EC2::Subnet::Id" },
+    "PublicSubnet3": { "Type": "AWS::EC2::Subnet::Id" },
+
+    "PrivateSubnet1": { "Type": "AWS::EC2::Subnet::Id" },
+    "PrivateSubnet2": { "Type": "AWS::EC2::Subnet::Id" },
+    "PrivateSubnet3": { "Type": "AWS::EC2::Subnet::Id" },
+
+    "ELBSecurityPolicyName": {
+      "Type": "String",
+      "Description": "Name of the SSL/Cipher policy to use for the ELB SSL",
+      "Default": "ELBSecurityPolicy-2016-08"
+    },
+
+    "EcsInstanceType" : {
+      "Type" : "String",
+      "Description" : "ECS EC2 instance type",
+      "Default" : "t2.micro",
+      "AllowedValues" : [
+       "t2.micro",
+       "t2.small",
+       "t2.medium",
+       "t2.large",
+       "m3.medium",
+       "m3.large",
+       "m3.xlarge",
+       "m3.2xlarge",
+       "c4.large",
+       "c4.xlarge",
+       "c4.2xlarge",
+       "c4.4xlarge",
+       "c4.8xlarge",
+       "c3.large",
+       "c3.xlarge",
+       "c3.2xlarge",
+       "c3.4xlarge",
+       "c3.8xlarge",
+       "r3.large",
+       "r3.xlarge",
+       "r3.2xlarge",
+       "r3.4xlarge",
+       "r3.8xlarge",
+       "i2.xlarge",
+       "i2.2xlarge",
+       "i2.4xlarge",
+       "i2.8xlarge"
+      ],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+
+    "MinClusterSize": {
+      "Type": "Number",
+      "Description": "Minimum number of active nodes in the cluster.",
+      "Default": 1
+    },
+
+    "MaxClusterSize": {
+      "Type": "Number",
+      "Description": "Maximum number of active nodes in the cluster.",
+      "Default": 6
+    },
+
+    "DesiredClusterSize": {
+      "Type": "Number",
+      "Description": "The desired number of nodes to have in the cluster. Acts as a default number.",
+      "Default": 3
+    },
+
+    "EC2KeyName": {
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "Description": "The key name to give to the allocated EC2s",
+      "Default": ""
+    },
+
+    "PublicHostedZone": {
+      "Type": "AWS::Route53::HostedZone::Id",
+      "Description": "The Private Route53 zone you are placing these resources into"
+    },
+
+    "AccessElasticsearchSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup::Id",
+      "Description": "The Security Group that provides access to Elasticsearch"
+    },
+
+    "ElbS3LoggingBucket": {
+      "Type": "String",
+      "Description": "The name of the S3 bucket to push ELB logs to"
+    }
+  },
+
+  "Mappings" : {
+    "AMI": {
+      "us-west-2": { "Value": "ami-8c4af8ec" }
+    },
+    "ElbAccountId": {
+      "us-west-2": { "Value": "797873946194" }
+    }
+  },
+
+  "Resources": {
+
+    "Certificate": {
+      "Type" : "AWS::CertificateManager::Certificate",
+      "Properties" : {
+        "DomainName" : { "Ref": "PublicFQDomain" },
+        "DomainValidationOptions" : [{
+          "DomainName": { "Ref": "PublicFQDomain" },
+          "ValidationDomain": { "Ref": "RootDomain" }
+        }],
+        "Tags" : [
+          {
+            "Key": "stack",
+            "Value": { "Ref": "AWS::StackName" }
+          }
+        ]
+      }
+    },
+
+    "ElasticsearchSecurityGroupIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId": { "Ref": "AccessElasticsearchSecurityGroup" },
+        "IpProtocol" : "tcp",
+        "FromPort" : 9200,
+        "ToPort" : 9200,
+        "SourceSecurityGroupId" : { "Ref" : "EcsSecurityGroup" }
+      }
+    },
+
+    "EcsCluster": {
+      "Type" : "AWS::ECS::Cluster"
+    },
+
+    "EcsSecurityGroup" : {
+     "Type" : "AWS::EC2::SecurityGroup",
+     "Properties" : {
+       "GroupDescription" : "Ports that our ELB can access of our ECS cluster.",
+       "VpcId" : { "Ref" : "Vpc" },
+       "SecurityGroupIngress" : [
+         {
+           "IpProtocol" : "tcp",
+           "FromPort" : 80,
+           "ToPort" : 80,
+           "SourceSecurityGroupId" :  { "Ref" : "ElbSecurityGroup" }
+         },
+         {
+           "IpProtocol" : "tcp",
+           "FromPort" : 443,
+           "ToPort" : 443,
+           "SourceSecurityGroupId" :  { "Ref" : "ElbSecurityGroup" }
+         }
+       ]
+      }
+    },
+
+    "ElbSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Ports that the public can access on our ELB",
+        "VpcId" : { "Ref" : "Vpc" },
+        "SecurityGroupIngress" : [
+          { "IpProtocol" : "tcp", "FromPort" : 80, "ToPort" : 80,
+            "CidrIp": "0.0.0.0/0" },
+          { "IpProtocol" : "tcp", "FromPort" : 443, "ToPort" : 443,
+            "CidrIp": "0.0.0.0/0" }
+        ]
+      }
+    },
+
+    "S3BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": { "Ref": "ElbS3LoggingBucket" },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "s3:PutObject" ,
+              "Effect": "Allow",
+              "Resource": { "Fn::Join": ["", ["arn:aws:s3:::", { "Fn::Join": ["/", [{ "Ref": "ElbS3LoggingBucket" }, { "Ref": "AWS::StackName" }] ]}, "/*" ]]},
+              "Principal": { "AWS": [ { "Fn::FindInMap" : [ "ElbAccountId", { "Ref": "AWS::Region"}, "Value" ]} ] }
+            }
+          ]
+        }
+      }
+    },
+
+    "Elb": {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "DependsOn": [ "S3BucketPolicy" ],
+      "Properties" : {
+        "AccessLoggingPolicy": {
+          "EmitInterval": 60,
+          "Enabled": true,
+          "S3BucketName": { "Ref": "ElbS3LoggingBucket" },
+          "S3BucketPrefix": { "Fn::Join": ["/", [ { "Ref": "AWS::StackName" }, "elb"]] }
+        },
+        "SecurityGroups" : [ { "Ref" : "ElbSecurityGroup" } ],
+        "Subnets" : [{ "Ref" : "PublicSubnet1" }, { "Ref" : "PublicSubnet2" }, { "Ref" : "PublicSubnet3" }],
+        "CrossZone" : "true",
+        "LoadBalancerName": { "Ref": "AWS::StackName" },
+        "Scheme": "internet-facing",
+        "HealthCheck": {
+          "Interval": "15",
+          "Target": "HTTPS:443/",
+          "Timeout": "5",
+          "UnhealthyThreshold": "2",
+          "HealthyThreshold": "2"
+        },
+        "Listeners" : [ {
+          "Protocol": "HTTP",
+          "InstanceProtocol": "HTTP",
+          "LoadBalancerPort" : 80,
+          "InstancePort" : 80
+        }, {
+          "Protocol": "HTTPS",
+          "InstanceProtocol": "HTTPS",
+          "LoadBalancerPort" : 443,
+          "InstancePort" : 443,
+          "SSLCertificateId": { "Ref": "Certificate"},
+          "PolicyNames": [ { "Ref": "ELBSecurityPolicyName" } ]
+        }],
+        "Policies": [
+          {
+            "PolicyName": "ELBSSLSecurityPolicy",
+            "PolicyType": "SSLNegotiationPolicyType",
+            "Attributes": [
+              {
+                "Name": "Reference-Security-Policy",
+                "Value": { "Ref": "ELBSecurityPolicyName" }
+              }
+            ]
+          },
+          {
+            "PolicyName": "MyPublicKeyPolicy",
+            "PolicyType": "PublicKeyPolicyType",
+            "Attributes": [
+              {
+                "Name": "PublicKey",
+                "Value": {
+                  "Fn::Join": [
+                    "\n",
+                    [
+                      "MIIFzTCCA7agAwIBAgIJAIH2WdWTb5D+MA0GCSqGSIb3DQEBCwUAME4xCzAJBgNV",
+                      "BAYTAlhYMQ0wCwYDVQQIEwRYWFhYMQ0wCwYDVQQHEwRYWFhYMQ0wCwYDVQQKEwRY",
+                      "WFhYMRIwEAYDVQQDEwlsb2NhbGhvc3QwHhcNMTYxMjE1MjIxODQxWhcNMjYxMjEz",
+                      "MjIxODQxWjBOMQswCQYDVQQGEwJYWDENMAsGA1UECBMEWFhYWDENMAsGA1UEBxME",
+                      "WFhYWDENMAsGA1UEChMEWFhYWDESMBAGA1UEAxMJbG9jYWxob3N0MIICIDANBgkq",
+                      "hkiG9w0BAQEFAAOCAg0AMIICCAKCAf8uJEK3WSXMTJKHwJt3z2DP1HSdNeXYLx1Z",
+                      "bYayBXRBzLV70Lrwpb46LY/SK756OKrdXoPyK/3RxR9fiiYyMSQhUiFOfqvjQj66",
+                      "D4Lh6Rvm0A+G3MilKOA5gWHPE4XF32DWBaDv/b7xwi8X5pb45PbA5sGgP8Z38N76",
+                      "BnrdMQ4ICpUpuL7WWZBhvfgEkW8A8walulXJpq0/9X3bZUlFhlP62zXXdFzxHVPR",
+                      "iFwB0L7AmwtT/+xiLmf8srdngTTfaHGEbmGH3hCIlKq32HKU2l+v69PPaARyLCVx",
+                      "1iCdDecCUv8ixyzeMNNMYhuTSMwbK7e6puzuW1dgW+y2LEpWnbw9UxmqUkYY2u65",
+                      "Q2P2C5olzhPZptXrU6eTxWs3Ski2HIfkz++n6P+D8lny92y/9TtBWfTR4EtQc1kJ",
+                      "xCig/H7RqS0AayC72EPwAb4JmIt8odbIqHAy1B1LiN9GV2siTp/TM5bVdPhjAplk",
+                      "Rtz9keWay2qEVZ4gY9siDfA0N6EPx+GsyXczZDE6XAMvrs6VJ6qmNj6gBTxOxe6Q",
+                      "mqJkKX4fbYG1VkgAg8u6vPgqTB8kMcuvDzxWOFccHDYgdEdCxi16nRWm9qUBz9Zt",
+                      "4dlGmAZ0I5ega0cmxOePh2gYmBmtXdMerZho2kTtp4PgEIYZ1f1lUA6Sl29EdxLl",
+                      "yeqw9YVfAgMBAAGjgbAwga0wHQYDVR0OBBYEFKzC3G0cxAyQiY4ntbSPdfFY+kmN",
+                      "MH4GA1UdIwR3MHWAFKzC3G0cxAyQiY4ntbSPdfFY+kmNoVKkUDBOMQswCQYDVQQG",
+                      "EwJYWDENMAsGA1UECBMEWFhYWDENMAsGA1UEBxMEWFhYWDENMAsGA1UEChMEWFhY",
+                      "WDESMBAGA1UEAxMJbG9jYWxob3N0ggkAgfZZ1ZNvkP4wDAYDVR0TBAUwAwEB/zAN",
+                      "BgkqhkiG9w0BAQsFAAOCAgAAIWMolGEvoL8TZqWr1X8nj9EvRpoPSHywbYMwI9t3",
+                      "KubLttNTVUm9Y8WRbRzwA959te0/0pnlMjHcZTOVzR8uEMil8/garMHZWuof3Pve",
+                      "YkWBGpU81cFVshDWYIvH/EBrcUOzqSekHiHMak7TftETMY7hfz872dbN2PC8Wv9w",
+                      "ghdxmjtNz5yU7ZB5ACIbNPS7AC2Cfp9zSzq6dNysJ6tsBWdcEBF/XJusFv2iu+5a",
+                      "EU6/wwrfmIB8/vUB2W8Cb/BhoFvYncMeDYBYG77qFCYAbdB0M9mquCikYbCsdL6J",
+                      "nYA+OOAHiW6fMKOeakQ0LPofFg1ucScMzhPSM+qibmHxOQRztElDrIWqeuDAaqbK",
+                      "zrMuLMvbUTbVhirCgRyNNf+lz07xFqSFTcQmQG/P+2sVKuYC7fTlcpi4QVguHGbT",
+                      "FNBjJqGmM73LeVgxrWLORg9c1o83rFlc9IK4ZsaMALLQkbbeATzLh0MhBnp7KoTr",
+                      "XfNrnFerVZcSL+TJR7x77YmJdWffSaKtg60qmxuwrZOjztzqvlo17bxbriBqknGu",
+                      "7/QneKzqkrY96j0Kc+tpFqLYNp95xfY3Myi9hmZyRO1oMCWhgKzdUB8+6LlM2Scz",
+                      "wQKh9R036n9b47W0TRIc3ihEkT64kDX/y0x4Bj+w0WA2AtrzMFCr5NqJcgfwgRf6",
+                      "kg=="
+                    ]
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "PolicyName": "MyBackendServerAuthenticationPolicy",
+            "PolicyType": "BackendServerAuthenticationPolicyType",
+            "Attributes": [
+              {
+                "Name": "PublicKeyPolicyName",
+                "Value": "MyPublicKeyPolicy"
+              }
+            ],
+            "InstancePorts": [ "443" ]
+          }
+        ]
+      }
+    },
+
+    "EcsIamInstanceRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "ec2.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ] },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "ecsInstanceRole",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ecs:CreateCluster",
+                    "ecs:RegisterContainerInstance",
+                    "ecs:DeregisterContainerInstance",
+                    "ecs:DiscoverPollEndpoint",
+                    "ecs:Submit*",
+                    "ecs:Poll"
+                  ],
+                  "Resource": [ "*" ]
+                }
+              ]
+            }
+          }, {
+            "PolicyName": "esInstanceRole",
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Action": [
+                    "ec2:DescribeInstances",
+                    "ec2:DescribeAvailabilityZones",
+                    "ec2:DescribeRegions",
+                    "ec2:DescribeSecurityGroups",
+                    "ec2:DescribeTags"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": [ "*" ]
+                }
+              ],
+              "Version": "2012-10-17"
+            }
+          }
+        ]
+      }
+    },
+
+    "EcsInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [ { "Ref": "EcsIamInstanceRole" } ]
+      }
+    },
+
+    "LaunchConfiguration": {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+        "ImageId" : { "Fn::FindInMap" : [ "AMI", { "Ref": "AWS::Region"}, "Value" ]},
+        "InstanceType" : { "Ref" : "EcsInstanceType" },
+        "AssociatePublicIpAddress" : "false",
+        "IamInstanceProfile": { "Ref": "EcsInstanceProfile" },
+        "SecurityGroups" : [ { "Ref" : "EcsSecurityGroup" } ],
+        "KeyName": { "Ref": "EC2KeyName" },
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+            "#!/bin/bash\n",
+            "echo ECS_CLUSTER=", { "Ref": "EcsCluster" }, " >> /etc/ecs/ecs.config\n"
+          ] ] }
+        }
+      }
+    },
+
+    "Asg" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "VPCZoneIdentifier" : [ { "Ref" : "PrivateSubnet1" }, { "Ref" : "PrivateSubnet2" }, { "Ref" : "PrivateSubnet3" } ],
+        "LaunchConfigurationName" : { "Ref" : "LaunchConfiguration" },
+        "MinSize" : { "Ref": "MinClusterSize" },
+        "MaxSize" : { "Ref": "MaxClusterSize" },
+        "DesiredCapacity" : { "Ref": "DesiredClusterSize" },
+        "Cooldown": "60",
+        "LoadBalancerNames": [ { "Ref": "Elb" } ],
+        "TerminationPolicies": [ "OldestInstance", "Default" ]
+      }
+    },
+
+    "DNS": {
+      "Type": "AWS::Route53::RecordSet",
+      "Properties": {
+        "AliasTarget": {
+          "DNSName": { "Fn::GetAtt": [ "Elb", "DNSName" ] },
+          "EvaluateTargetHealth": false,
+          "HostedZoneId": { "Fn::GetAtt": ["Elb", "CanonicalHostedZoneNameID"] }
+        },
+        "HostedZoneId": { "Ref": "PublicHostedZone" },
+        "Name": { "Ref": "PublicFQDomain" },
+        "Type": "A"
+      }
+    }
+  }
+}
