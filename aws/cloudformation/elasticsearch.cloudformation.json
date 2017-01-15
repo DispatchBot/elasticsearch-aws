@@ -101,15 +101,19 @@
     "ElbS3LoggingBucket": {
       "Type": "String",
       "Description": "The name of the S3 bucket to push ELB logs to"
+    },
+
+    "Tenancy": {
+      "Type": "String",
+      "Description": "The allowed tenancy of instances launched",
+      "Default": "default",
+      "AllowedValues": [ "default", "dedicated" ]
     }
   },
 
   "Mappings" : {
     "AMI": {
-      "us-west-2": { "Value": "ami-83d665e3" }
-    },
-    "ElbAccountId": {
-      "us-west-2": { "Value": "797873946194" }
+      "us-west-2": { "Value": "ami-db3984bb" }
     }
   },
 
@@ -136,7 +140,9 @@
         "VpcId" : { "Ref" : "Vpc" },
         "SecurityGroupIngress" : [
           { "IpProtocol" : "tcp", "FromPort" : 9200, "ToPort" : 9200,
-            "SourceSecurityGroupId" : { "Ref": "AccessElasticsearchSecurityGroup" } }
+            "SourceSecurityGroupId" : { "Ref": "AccessElasticsearchSecurityGroup" } },
+          { "IpProtocol" : "tcp", "FromPort" : 9200, "ToPort" : 9200,
+            "SourceSecurityGroupId" : { "Ref": "ElasticSearchSecurityGroup" } }
         ]
       }
     },
@@ -177,26 +183,8 @@
       }
     },
 
-    "S3BucketPolicy": {
-      "Type": "AWS::S3::BucketPolicy",
-      "Properties": {
-        "Bucket": { "Ref": "ElbS3LoggingBucket" },
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Action": "s3:PutObject" ,
-              "Effect": "Allow",
-              "Resource": { "Fn::Join": ["", ["arn:aws:s3:::", { "Fn::Join": ["/", [{ "Ref": "ElbS3LoggingBucket" }, { "Ref": "AWS::StackName" }] ]}, "/*" ]]},
-              "Principal": { "AWS": [ { "Fn::FindInMap" : [ "ElbAccountId", { "Ref": "AWS::Region"}, "Value" ]} ] }
-            }
-          ]
-        }
-      }
-    },
-
     "PrivateElb": {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
-      "DependsOn": [ "S3BucketPolicy" ],
       "Properties" : {
         "AccessLoggingPolicy": {
           "EmitInterval": 60,
@@ -387,7 +375,9 @@
       "Properties" : {
         "ImageId" : { "Fn::FindInMap" : [ "AMI", { "Ref": "AWS::Region"}, "Value" ]},
         "InstanceType" : { "Ref" : "EcsInstanceType" },
+        "InstanceMonitoring": false,
         "AssociatePublicIpAddress" : "false",
+        "PlacementTenancy": { "Ref": "Tenancy" },
         "IamInstanceProfile": { "Ref": "EcsInstanceProfile" },
         "SecurityGroups" : [ { "Ref" : "EcsSecurityGroup" }, { "Ref": "ElasticSearchSecurityGroup" } ],
         "KeyName": { "Ref": "EC2KeyName" },

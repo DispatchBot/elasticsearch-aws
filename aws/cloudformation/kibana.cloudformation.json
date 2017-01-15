@@ -105,15 +105,19 @@
     "ElbS3LoggingBucket": {
       "Type": "String",
       "Description": "The name of the S3 bucket to push ELB logs to"
+    },
+
+    "Tenancy": {
+      "Type": "String",
+      "Description": "The allowed tenancy of instances launched",
+      "Default": "default",
+      "AllowedValues": [ "default", "dedicated" ]
     }
   },
 
   "Mappings" : {
     "AMI": {
-      "us-west-2": { "Value": "ami-8c4af8ec" }
-    },
-    "ElbAccountId": {
-      "us-west-2": { "Value": "797873946194" }
+      "us-west-2": { "Value": "ami-e7398487" }
     }
   },
 
@@ -187,26 +191,8 @@
       }
     },
 
-    "S3BucketPolicy": {
-      "Type": "AWS::S3::BucketPolicy",
-      "Properties": {
-        "Bucket": { "Ref": "ElbS3LoggingBucket" },
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Action": "s3:PutObject" ,
-              "Effect": "Allow",
-              "Resource": { "Fn::Join": ["", ["arn:aws:s3:::", { "Fn::Join": ["/", [{ "Ref": "ElbS3LoggingBucket" }, { "Ref": "AWS::StackName" }] ]}, "/*" ]]},
-              "Principal": { "AWS": [ { "Fn::FindInMap" : [ "ElbAccountId", { "Ref": "AWS::Region"}, "Value" ]} ] }
-            }
-          ]
-        }
-      }
-    },
-
     "Elb": {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
-      "DependsOn": [ "S3BucketPolicy" ],
       "Properties" : {
         "AccessLoggingPolicy": {
           "EmitInterval": 60,
@@ -384,6 +370,8 @@
       "Properties" : {
         "ImageId" : { "Fn::FindInMap" : [ "AMI", { "Ref": "AWS::Region"}, "Value" ]},
         "InstanceType" : { "Ref" : "EcsInstanceType" },
+        "PlacementTenancy": { "Ref": "Tenancy" },
+        "InstanceMonitoring": false,
         "AssociatePublicIpAddress" : "false",
         "IamInstanceProfile": { "Ref": "EcsInstanceProfile" },
         "SecurityGroups" : [ { "Ref" : "EcsSecurityGroup" } ],
