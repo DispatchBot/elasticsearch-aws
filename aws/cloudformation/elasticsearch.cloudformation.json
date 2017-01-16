@@ -404,7 +404,10 @@
             "echo cloud.aws.region: \"", { "Ref": "AWS::Region" }, "\" >> /etc/elasticsearch/elasticsearch.yml\n",
             "echo discovery.ec2.groups: \"", { "Ref": "ElasticSearchSecurityGroup" }, "\" >> /etc/elasticsearch/elasticsearch.yml\n",
             "ip=$(/sbin/ifconfig eth0|grep inet|head -1|sed 's/\\:/ /'|awk '{print $3}')\n",
-            "echo network.publish_host: $ip >> /etc/elasticsearch/elasticsearch.yml"
+            "echo network.publish_host: $ip >> /etc/elasticsearch/elasticsearch.yml\n",
+            "service docker stop || true\n",
+            "service docker start\n",
+            "start ecs"
           ] ] }
         }
       }
