@@ -113,7 +113,7 @@
 
   "Mappings" : {
     "AMI": {
-      "us-west-2": { "Value": "ami-74338e14" }
+      "us-west-2": { "Value": "ami-a00fb0c0" }
     }
   },
 
