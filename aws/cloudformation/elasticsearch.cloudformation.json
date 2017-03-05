@@ -354,6 +354,16 @@
                     "s3:DeleteObject"
                   ],
                   "Resource": { "Fn::Join": ["", [ "arn:aws:s3:::", { "Ref": "S3RepositoryBucket" }, "/*"]]}
+                }, {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:Put*",
+                    "s3:Get*",
+                    "s3:List*",
+                    "s3:AbortMultipartUpload",
+                    "s3:DeleteObject"
+                  ],
+                  "Resource": { "Fn::Join": ["", [ "arn:aws:s3:::", { "Ref": "S3RepositoryBucket" }]]}
                 }
               ]
             }
