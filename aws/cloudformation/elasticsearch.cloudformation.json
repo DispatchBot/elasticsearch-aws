@@ -128,7 +128,7 @@
     "AccessElasticsearchSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
-        "GroupDescription" : "A group of resources that can access Elasticsesarch publicly",
+        "GroupDescription" : "A group of resources that can access Elasticsesarch",
         "VpcId" : { "Ref" : "Vpc" }
       }
     },
