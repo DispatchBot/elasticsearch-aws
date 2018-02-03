@@ -42,9 +42,9 @@
        "t2.medium",
        "t2.large",
        "m3.medium",
-       "m3.large",
-       "m3.xlarge",
-       "m3.2xlarge",
+       "m5.large",
+       "m5.xlarge",
+       "m5.2xlarge",
        "c4.large",
        "c4.xlarge",
        "c4.2xlarge",
@@ -97,11 +97,6 @@
       "Description": "The Private Route53 zone you are placing these resources into"
     },
 
-    "AccessElasticsearchSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup::Id",
-      "Description": "The Security Group that provides access to Elasticsearch"
-    },
-
     "ElbS3LoggingBucket": {
       "Type": "String",
       "Description": "The name of the S3 bucket to push ELB logs to"
@@ -117,7 +112,7 @@
 
   "Mappings" : {
     "AMI": {
-      "us-west-2": { "Value": "ami-e835bc88" }
+      "us-west-2": { "Value": "ami-030fb57b" }
     }
   },
 
@@ -137,17 +132,6 @@
             "Value": { "Ref": "AWS::StackName" }
           }
         ]
-      }
-    },
-
-    "ElasticsearchSecurityGroupIngress": {
-      "Type": "AWS::EC2::SecurityGroupIngress",
-      "Properties" : {
-        "GroupId": { "Ref": "AccessElasticsearchSecurityGroup" },
-        "IpProtocol" : "tcp",
-        "FromPort" : 9200,
-        "ToPort" : 9200,
-        "SourceSecurityGroupId" : { "Ref" : "EcsSecurityGroup" }
       }
     },
 
@@ -246,38 +230,38 @@
                   "Fn::Join": [
                     "\n",
                     [
-                      "MIIFzTCCA7agAwIBAgIJAIH2WdWTb5D+MA0GCSqGSIb3DQEBCwUAME4xCzAJBgNV",
-                      "BAYTAlhYMQ0wCwYDVQQIEwRYWFhYMQ0wCwYDVQQHEwRYWFhYMQ0wCwYDVQQKEwRY",
-                      "WFhYMRIwEAYDVQQDEwlsb2NhbGhvc3QwHhcNMTYxMjE1MjIxODQxWhcNMjYxMjEz",
-                      "MjIxODQxWjBOMQswCQYDVQQGEwJYWDENMAsGA1UECBMEWFhYWDENMAsGA1UEBxME",
-                      "WFhYWDENMAsGA1UEChMEWFhYWDESMBAGA1UEAxMJbG9jYWxob3N0MIICIDANBgkq",
-                      "hkiG9w0BAQEFAAOCAg0AMIICCAKCAf8uJEK3WSXMTJKHwJt3z2DP1HSdNeXYLx1Z",
-                      "bYayBXRBzLV70Lrwpb46LY/SK756OKrdXoPyK/3RxR9fiiYyMSQhUiFOfqvjQj66",
-                      "D4Lh6Rvm0A+G3MilKOA5gWHPE4XF32DWBaDv/b7xwi8X5pb45PbA5sGgP8Z38N76",
-                      "BnrdMQ4ICpUpuL7WWZBhvfgEkW8A8walulXJpq0/9X3bZUlFhlP62zXXdFzxHVPR",
-                      "iFwB0L7AmwtT/+xiLmf8srdngTTfaHGEbmGH3hCIlKq32HKU2l+v69PPaARyLCVx",
-                      "1iCdDecCUv8ixyzeMNNMYhuTSMwbK7e6puzuW1dgW+y2LEpWnbw9UxmqUkYY2u65",
-                      "Q2P2C5olzhPZptXrU6eTxWs3Ski2HIfkz++n6P+D8lny92y/9TtBWfTR4EtQc1kJ",
-                      "xCig/H7RqS0AayC72EPwAb4JmIt8odbIqHAy1B1LiN9GV2siTp/TM5bVdPhjAplk",
-                      "Rtz9keWay2qEVZ4gY9siDfA0N6EPx+GsyXczZDE6XAMvrs6VJ6qmNj6gBTxOxe6Q",
-                      "mqJkKX4fbYG1VkgAg8u6vPgqTB8kMcuvDzxWOFccHDYgdEdCxi16nRWm9qUBz9Zt",
-                      "4dlGmAZ0I5ega0cmxOePh2gYmBmtXdMerZho2kTtp4PgEIYZ1f1lUA6Sl29EdxLl",
-                      "yeqw9YVfAgMBAAGjgbAwga0wHQYDVR0OBBYEFKzC3G0cxAyQiY4ntbSPdfFY+kmN",
-                      "MH4GA1UdIwR3MHWAFKzC3G0cxAyQiY4ntbSPdfFY+kmNoVKkUDBOMQswCQYDVQQG",
-                      "EwJYWDENMAsGA1UECBMEWFhYWDENMAsGA1UEBxMEWFhYWDENMAsGA1UEChMEWFhY",
-                      "WDESMBAGA1UEAxMJbG9jYWxob3N0ggkAgfZZ1ZNvkP4wDAYDVR0TBAUwAwEB/zAN",
-                      "BgkqhkiG9w0BAQsFAAOCAgAAIWMolGEvoL8TZqWr1X8nj9EvRpoPSHywbYMwI9t3",
-                      "KubLttNTVUm9Y8WRbRzwA959te0/0pnlMjHcZTOVzR8uEMil8/garMHZWuof3Pve",
-                      "YkWBGpU81cFVshDWYIvH/EBrcUOzqSekHiHMak7TftETMY7hfz872dbN2PC8Wv9w",
-                      "ghdxmjtNz5yU7ZB5ACIbNPS7AC2Cfp9zSzq6dNysJ6tsBWdcEBF/XJusFv2iu+5a",
-                      "EU6/wwrfmIB8/vUB2W8Cb/BhoFvYncMeDYBYG77qFCYAbdB0M9mquCikYbCsdL6J",
-                      "nYA+OOAHiW6fMKOeakQ0LPofFg1ucScMzhPSM+qibmHxOQRztElDrIWqeuDAaqbK",
-                      "zrMuLMvbUTbVhirCgRyNNf+lz07xFqSFTcQmQG/P+2sVKuYC7fTlcpi4QVguHGbT",
-                      "FNBjJqGmM73LeVgxrWLORg9c1o83rFlc9IK4ZsaMALLQkbbeATzLh0MhBnp7KoTr",
-                      "XfNrnFerVZcSL+TJR7x77YmJdWffSaKtg60qmxuwrZOjztzqvlo17bxbriBqknGu",
-                      "7/QneKzqkrY96j0Kc+tpFqLYNp95xfY3Myi9hmZyRO1oMCWhgKzdUB8+6LlM2Scz",
-                      "wQKh9R036n9b47W0TRIc3ihEkT64kDX/y0x4Bj+w0WA2AtrzMFCr5NqJcgfwgRf6",
-                      "kg=="
+                      "MIIF+DCCA+CgAwIBAgICEAEwDQYJKoZIhvcNAQELBQAwgZAxCzAJBgNVBAYTAlVT",
+                      "MRMwEQYDVQQIDApXYXNoaW5ndG9uMRQwEgYDVQQKDAtEaXNwYXRjaEJvdDEMMAoG",
+                      "A1UECwwDT3BzMSQwIgYDVQQDDBtEaXNwYXRjaEJvdCBJbnRlcm1lZGlhdGUgQ0Ex",
+                      "IjAgBgkqhkiG9w0BCQEWE29wc0BkaXNwYXRjaGJvdC5jb20wHhcNMTcxMjIyMjAw",
+                      "NTM4WhcNMjAwMTExMjAwNTM4WjCBizELMAkGA1UEBhMCVVMxEzARBgNVBAgMCldh",
+                      "c2hpbmd0b24xFDASBgNVBAoMC0Rpc3BhdGNoQm90MQwwCgYDVQQLDANPcHMxHzAd",
+                      "BgNVBAMMFiouZGlzcGF0Y2hib3QuaW50ZXJuYWwxIjAgBgkqhkiG9w0BCQEWE29w",
+                      "c0BkaXNwYXRjaGJvdC5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB",
+                      "AQDtkSxhM2MXlRykgWPmAt73UBhAdwoC4NmXqolLYegAMdTpTNSzrAITlpAM5xci",
+                      "TU3i3tynA6RbrWceaVL0GaGoPlSdpTfAjJmyvj2GzTSAdkpLG5s6o6h5FoAg2CZx",
+                      "Zs2jXGzxkiE8szqmXL7gaDxERkWuWvcQTonY5ovJHOGB1MssWEVlJjX0TyI/Ejop",
+                      "9ZrNK5wBo2K54vra5eORg23rTVu1gvQe/t/mptem6zxzQ2Z5roHn38uHygkwI2W/",
+                      "zr0PtJ4lN/mRCXWa1Lspsv6w3wXUrVrH37EQ8c3vK4OSst37cKrRbWhjjp5ZAP1c",
+                      "zTYqXy8gH43UA6EBBNjso1dLAgMBAAGjggFdMIIBWTAJBgNVHRMEAjAAMBEGCWCG",
+                      "SAGG+EIBAQQEAwIGQDAzBglghkgBhvhCAQ0EJhYkT3BlblNTTCBHZW5lcmF0ZWQg",
+                      "U2VydmVyIENlcnRpZmljYXRlMB0GA1UdDgQWBBQS1s42Oq3YqBBItxHkc0vyDEy9",
+                      "mTCBvwYDVR0jBIG3MIG0gBRTrlq/ekAwTwno6A8v/msLRkHuS6GBl6SBlDCBkTEL",
+                      "MAkGA1UEBhMCVVMxEzARBgNVBAgMCldhc2hpbmd0b24xFDASBgNVBAoMC0Rpc3Bh",
+                      "dGNoQm90MQwwCgYDVQQLDANPcHMxJTAjBgNVBAMMHERpc3BhdGNoQm90IEludGVy",
+                      "bmFsIFJvb3QgQ0ExIjAgBgkqhkiG9w0BCQEWE29wc0BkaXNwYXRjaGJvdC5jb22C",
+                      "AhAAMA4GA1UdDwEB/wQEAwIFoDATBgNVHSUEDDAKBggrBgEFBQcDATANBgkqhkiG",
+                      "9w0BAQsFAAOCAgEAjc60FzJHTj+g6mTHle+f7mG2Cih+bv9QOApsYQfZ40jVzKVV",
+                      "9cTo2RJznUF3OYt3HvIjwpjkdK7fdDyY/RJhYWA8qqG50z+GnfP/XrgLE3ifJHhv",
+                      "uys35CLkWG07kDFXCLgi7yG3Ww/CIz9PHwya8VV0Ae6uQUulkh+LbF0pq9Ooz9/l",
+                      "jEgI2MoPRlXSTG/LBF9+kXxx2hIE2+3gpdxEdcE/GuN/GTC+IZsURqqPkxDPXCCj",
+                      "DkEhlws5pQOZce5YOjHLS2B4J92vEMdV5MH32reR7Zlis7xOwKfyHFw4rfnV4C4v",
+                      "xm60AP5MYfeYIQDcgxYULAv/OCvnJT8TWitFP3B4ygSnbq+8KmxzzP4IvhRvHhm1",
+                      "+DdM+A+T5aNqHfjQOQt0NaYMaKlO7EvH3UYE8fID8qdWzgryspzUiOtYCaH1Ow7M",
+                      "O0aMowE0yZyvYCOhOoXj4iomzkQ7Wmi80Cn1K0YgHlaAOCo2MfqsV1GVQwbgqMx7",
+                      "hYziS489YUaoxxBzgBLBFPNsfp+Xr0Nil0XGf27tPiB6Wq6kYd6zkD0SR7HuQv04",
+                      "Cn5fP4QEImdvMYidoY6lOo5SpPXkWDXnZwNewLupnLv49Gozq6IG+YCyRk7Ti+Lb",
+                      "klz/oBHBOktOpW8arJIZxrLPYsqlqflYGQZS4mBH8ZxiVfEfCqAbjScyAIw="
                     ]
                   ]
                 }
@@ -351,6 +335,49 @@
                 }
               ],
               "Version": "2012-10-17"
+            }
+          }, {
+            "PolicyName": "kinesisReadAccessForLogstash",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "kinesis:DescribeStream",
+                    "kinesis:GetShardIterator",
+                    "kinesis:GetRecords",
+                    "kinesis:ListStreams"
+                  ],
+                  "Resource": [ "*" ]
+                }
+              ]
+            }
+          }, {
+            "PolicyName": "dynamodDBAccessForLogstash",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "dynamodb:BatchGetItem",
+                    "dynamodb:BatchWriteItem",
+                    "dynamodb:CreateTable",
+                    "dynamodb:DeleteItem",
+                    "dynamodb:DescribeTable",
+                    "dynamodb:GetItem",
+                    "dynamodb:GetRecords",
+                    "dynamodb:ListTables",
+                    "dynamodb:PutItem",
+                    "dynamodb:Query",
+                    "dynamodb:Scan",
+                    "dynamodb:UpdateItem",
+                    "dynamodb:UpdateTable"
+                  ],
+                  "Resource": [ "*" ]
+                }
+              ]
             }
           }
         ]
