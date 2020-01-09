@@ -15,7 +15,7 @@
    "ELBSecurityPolicyName": {
      "Type": "String",
      "Description": "Name of the SSL/Cipher policy to use for the ELB SSL",
-     "Default": "ELBSecurityPolicy-2016-08"
+     "Default": "ELBSecurityPolicy-TLS-1-2-2017-01"
    },
 
     "EcsInstanceType" : {
@@ -89,7 +89,7 @@
 
     "Certificate": {
       "Type": "String",
-      "Description": "The ID of the SSL cert to use with the ELB"
+      "Description": "The ARN of the SSL cert to use with the ELB"
     },
 
     "ElbS3LoggingBucket": {
@@ -107,10 +107,12 @@
 
   "Mappings" : {
     "AMI": {
-      "us-west-2": { "Value": "ami-7009b308" }
+      "us-west-2": { "Value": "ami-0aa51c6b209594418" },
+      "us-east-2": { "Value": "ami-066c85f9c48e28947" }
     },
     "Ec2Endpoint": {
-      "us-west-2": { "Value": "ec2.us-west-2.amazonaws.com" }
+      "us-west-2": { "Value": "ec2.us-west-2.amazonaws.com" },
+      "us-east-2": { "Value": "ec2.us-east-2.amazonaws.com" }
     }
   },
 
@@ -230,38 +232,34 @@
                   "Fn::Join": [
                     "\n",
                     [
-                      "MIIF+DCCA+CgAwIBAgICEAEwDQYJKoZIhvcNAQELBQAwgZAxCzAJBgNVBAYTAlVT",
-                      "MRMwEQYDVQQIDApXYXNoaW5ndG9uMRQwEgYDVQQKDAtEaXNwYXRjaEJvdDEMMAoG",
-                      "A1UECwwDT3BzMSQwIgYDVQQDDBtEaXNwYXRjaEJvdCBJbnRlcm1lZGlhdGUgQ0Ex",
-                      "IjAgBgkqhkiG9w0BCQEWE29wc0BkaXNwYXRjaGJvdC5jb20wHhcNMTcxMjIyMjAw",
-                      "NTM4WhcNMjAwMTExMjAwNTM4WjCBizELMAkGA1UEBhMCVVMxEzARBgNVBAgMCldh",
-                      "c2hpbmd0b24xFDASBgNVBAoMC0Rpc3BhdGNoQm90MQwwCgYDVQQLDANPcHMxHzAd",
-                      "BgNVBAMMFiouZGlzcGF0Y2hib3QuaW50ZXJuYWwxIjAgBgkqhkiG9w0BCQEWE29w",
-                      "c0BkaXNwYXRjaGJvdC5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB",
-                      "AQDtkSxhM2MXlRykgWPmAt73UBhAdwoC4NmXqolLYegAMdTpTNSzrAITlpAM5xci",
-                      "TU3i3tynA6RbrWceaVL0GaGoPlSdpTfAjJmyvj2GzTSAdkpLG5s6o6h5FoAg2CZx",
-                      "Zs2jXGzxkiE8szqmXL7gaDxERkWuWvcQTonY5ovJHOGB1MssWEVlJjX0TyI/Ejop",
-                      "9ZrNK5wBo2K54vra5eORg23rTVu1gvQe/t/mptem6zxzQ2Z5roHn38uHygkwI2W/",
-                      "zr0PtJ4lN/mRCXWa1Lspsv6w3wXUrVrH37EQ8c3vK4OSst37cKrRbWhjjp5ZAP1c",
-                      "zTYqXy8gH43UA6EBBNjso1dLAgMBAAGjggFdMIIBWTAJBgNVHRMEAjAAMBEGCWCG",
-                      "SAGG+EIBAQQEAwIGQDAzBglghkgBhvhCAQ0EJhYkT3BlblNTTCBHZW5lcmF0ZWQg",
-                      "U2VydmVyIENlcnRpZmljYXRlMB0GA1UdDgQWBBQS1s42Oq3YqBBItxHkc0vyDEy9",
-                      "mTCBvwYDVR0jBIG3MIG0gBRTrlq/ekAwTwno6A8v/msLRkHuS6GBl6SBlDCBkTEL",
-                      "MAkGA1UEBhMCVVMxEzARBgNVBAgMCldhc2hpbmd0b24xFDASBgNVBAoMC0Rpc3Bh",
-                      "dGNoQm90MQwwCgYDVQQLDANPcHMxJTAjBgNVBAMMHERpc3BhdGNoQm90IEludGVy",
-                      "bmFsIFJvb3QgQ0ExIjAgBgkqhkiG9w0BCQEWE29wc0BkaXNwYXRjaGJvdC5jb22C",
-                      "AhAAMA4GA1UdDwEB/wQEAwIFoDATBgNVHSUEDDAKBggrBgEFBQcDATANBgkqhkiG",
-                      "9w0BAQsFAAOCAgEAjc60FzJHTj+g6mTHle+f7mG2Cih+bv9QOApsYQfZ40jVzKVV",
-                      "9cTo2RJznUF3OYt3HvIjwpjkdK7fdDyY/RJhYWA8qqG50z+GnfP/XrgLE3ifJHhv",
-                      "uys35CLkWG07kDFXCLgi7yG3Ww/CIz9PHwya8VV0Ae6uQUulkh+LbF0pq9Ooz9/l",
-                      "jEgI2MoPRlXSTG/LBF9+kXxx2hIE2+3gpdxEdcE/GuN/GTC+IZsURqqPkxDPXCCj",
-                      "DkEhlws5pQOZce5YOjHLS2B4J92vEMdV5MH32reR7Zlis7xOwKfyHFw4rfnV4C4v",
-                      "xm60AP5MYfeYIQDcgxYULAv/OCvnJT8TWitFP3B4ygSnbq+8KmxzzP4IvhRvHhm1",
-                      "+DdM+A+T5aNqHfjQOQt0NaYMaKlO7EvH3UYE8fID8qdWzgryspzUiOtYCaH1Ow7M",
-                      "O0aMowE0yZyvYCOhOoXj4iomzkQ7Wmi80Cn1K0YgHlaAOCo2MfqsV1GVQwbgqMx7",
-                      "hYziS489YUaoxxBzgBLBFPNsfp+Xr0Nil0XGf27tPiB6Wq6kYd6zkD0SR7HuQv04",
-                      "Cn5fP4QEImdvMYidoY6lOo5SpPXkWDXnZwNewLupnLv49Gozq6IG+YCyRk7Ti+Lb",
-                      "klz/oBHBOktOpW8arJIZxrLPYsqlqflYGQZS4mBH8ZxiVfEfCqAbjScyAIw="
+                      "MIIFFTCCAv4CCQCronx+M1PkszANBgkqhkiG9w0BAQsFADBOMQswCQYDVQQGEwJY",
+                      "WDENMAsGA1UECAwEWFhYWDENMAsGA1UEBwwEWFhYWDENMAsGA1UECgwEWFhYWDES",
+                      "MBAGA1UEAwwJbG9jYWxob3N0MB4XDTE5MTIxMjE3MDEzOFoXDTI5MTIwOTE3MDEz",
+                      "OFowTjELMAkGA1UEBhMCWFgxDTALBgNVBAgMBFhYWFgxDTALBgNVBAcMBFhYWFgx",
+                      "DTALBgNVBAoMBFhYWFgxEjAQBgNVBAMMCWxvY2FsaG9zdDCCAiAwDQYJKoZIhvcN",
+                      "AQEBBQADggINADCCAggCggH/JpLCDGMS48KzVvITWgG+TRwA/nVNhXgKBQ5gapwp",
+                      "qTnK54/XqDBr4slFRhOaxqCyLgtHrH6qCRkvLt8HQjE6vuzVjKdKGey8wA5qwVM+",
+                      "btGqYhCaYl+huhaEc/wPZH+Myq1A6xHdJEl1dKkzGzcP0CgbA80+ueo2Nv0fWv+Q",
+                      "J07LToQEKNv3Tlw8paSzVG+d09JMr9p6AeHk9kJM52Qx/fyOsQwUKSVgo/+OS0rr",
+                      "mU7Ovjhp+BQn16qNFqubKvyk6YavAfwwtDblVh2NtXGwpR1bcW8Xj6IO7Zeo3HXh",
+                      "9H7ELdBL5MarYzFwECIld3BQGC9kgRbwQdz8WPN5IDM3iowDtLc1GXP8zC+qBEgj",
+                      "m5HW58d+iFdFUjgdvNc1PHLeCa0uUetjtbzkGrWI2dFcXcN8lPsbcDYWIO3u2CdA",
+                      "COYrVKDGORPuuc2/+jkqrKFwDQeOzkuZRhuFbgo9toWu8sOVQuZwrE0f43SWRaIC",
+                      "tv8032efN8XYC5ehUGzJPIiV8wkbxXqi+BsgowoDrsnNhHfvGpJyQ8wZgWqKoGI5",
+                      "1ay6ZZQfmPuxP4ZmP2dq1ziPG9RGVqWixu2F45khJIxQc2/WmnI6E5XLXlQ+eBU1",
+                      "HFDqo6AJ74kkLuY7JbVG7GcWg5adAdBpk3NTAj1DpBy71OE2X290iZPUovFdpJhT",
+                      "qQIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAAAJXD9uzBOlcE/p1eP1FfBY325fF8NM",
+                      "chODW1vRbowMZd3I4c+iup9LakwPcm5gIKTPWuHJsgSX8dzKin1S6ZUpUYgRwMIF",
+                      "JgdS6Fom7L+ibjhdzVzxNzsTjVxDjeUP3XALVm3RNyPKtrL2LJMw4gqZOqi6goGb",
+                      "r0Hk2yfI/BTXDldxi/+Kyv4b9p2G7nkEtejX9hC6mn0TXN+Tmhbri4aPuyVDotR3",
+                      "4MH5XlhoAckW8PpzgFA+RyBkAth6SQ4vKEtcOYNMNcwGzRjm0WdybVlU174tm3bn",
+                      "ZvbBqKJ6YaO//mF8ibBxhOMa8ST6EUypIwXMcJrTs6i93Ih2o7v61yYen0keQiht",
+                      "sJR2n8wU/zNr0B13fO3nzl52Y2aU/rhnektIueIVsGAuItyONPlgifoCzy65n0+H",
+                      "fV8b88j1frP3qcKuMZFjz8MOTFweU9+pU8ot09y46Y9vfHLC6Eoxu1mrWz4aWPT7",
+                      "YOpp/1CkJ3iLwNFAs2luZJp8jkL9yH70eZ0CffluEf6eQw6M09z/eUrONTJmGLfi",
+                      "eVccfimWFQvNm958ZQlnOylkZpVpOtyHvQcKX126SqtVBCkI8Z5Fz3iRB+GGx2cB",
+                      "+q0wKNX6cczgvoP4GFthiL0rxSU4JbjQUm9/rGFBBB4mrBcks2Nd0C+v9p0R35Sy",
+                      "q62Ggqz65oPZ"
                     ]
                   ]
                 }
