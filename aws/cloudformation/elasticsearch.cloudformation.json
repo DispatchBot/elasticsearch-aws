@@ -108,7 +108,7 @@
   "Mappings" : {
     "AMI": {
       "us-west-2": { "Value": "ami-07b95939fdab1a771" },
-      "us-east-2": { "Value": "ami-0f2917310a52d5da4" }
+      "us-east-2": { "Value": "ami-07234141bcbd691db" }
     },
     "Ec2Endpoint": {
       "us-west-2": { "Value": "ec2.us-west-2.amazonaws.com" },
