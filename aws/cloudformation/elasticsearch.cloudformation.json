@@ -107,7 +107,7 @@
 
   "Mappings" : {
     "AMI": {
-      "us-west-2": { "Value": "ami-07b95939fdab1a771" },
+      "us-west-2": { "Value": "ami-0e3b95337a3010ee5" },
       "us-east-2": { "Value": "ami-07234141bcbd691db" }
     },
     "Ec2Endpoint": {
