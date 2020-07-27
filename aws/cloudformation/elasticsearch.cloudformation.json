@@ -107,8 +107,8 @@
 
   "Mappings" : {
     "AMI": {
-      "us-west-2": { "Value": "ami-0aa51c6b209594418" },
-      "us-east-2": { "Value": "ami-066c85f9c48e28947" }
+      "us-west-2": { "Value": "ami-0e3b95337a3010ee5" },
+      "us-east-2": { "Value": "ami-07234141bcbd691db" }
     },
     "Ec2Endpoint": {
       "us-west-2": { "Value": "ec2.us-west-2.amazonaws.com" },
@@ -414,11 +414,11 @@
 
             "echo discovery.ec2.endpoint: \"", { "Fn::FindInMap" : [ "Ec2Endpoint", { "Ref": "AWS::Region"}, "Value" ]}, "\" >> /etc/elasticsearch/elasticsearch.yml\n",
             "echo discovery.ec2.groups: \"", { "Ref": "ElasticSearchSecurityGroup" }, "\" >> /etc/elasticsearch/elasticsearch.yml\n",
-            "ip=$(/sbin/ifconfig eth0|grep inet|head -1|sed 's/\\:/ /'|awk '{print $3}')\n",
+            "ip=$(/sbin/ifconfig eth0|grep inet|head -1|sed 's/:/ /'|awk '{print $2}')\n",
             "echo network.publish_host: $ip >> /etc/elasticsearch/elasticsearch.yml\n",
             "service docker stop || true\n",
             "service docker start\n",
-            "start ecs"
+            "systemctl enable --now --no-block ecs.service"
           ] ] }
         }
       }
